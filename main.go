@@ -87,6 +87,7 @@ func renderRow(wg *sync.WaitGroup, img *image.RGBA, y int) {
 	fy := float64(y)
 	for x := 0; x < ImageWidth; x++ {
 		fx := float64(x)
+
 		var r, g, b int
 		for i := 0; i < Samples; i++ {
 			c := Height*complex(
@@ -100,9 +101,9 @@ func renderRow(wg *sync.WaitGroup, img *image.RGBA, y int) {
 			b += colorStep(col.B)
 		}
 
-		cr := convertColor(float64(r) / float64(Samples))
-		cg := convertColor(float64(g) / float64(Samples))
-		cb := convertColor(float64(b) / float64(Samples))
+		cr := convertColor(float64(r) / Samples)
+		cg := convertColor(float64(g) / Samples)
+		cb := convertColor(float64(b) / Samples)
 
 		setPix(img, x, y, color.RGBA{R: cr, G: cg, B: cb, A: 255})
 	}
@@ -130,7 +131,7 @@ func mandelbrotColor(check float64, iter int) color.RGBA {
 	return color.RGBA{R: 255, G: 255, B: 255, A: 255}
 }
 
-// mandelbrotIter checks if |f(z)| becomes greater than a threshold
+// mandelbrotIter checks if |f(z)| becomes greater than Threshold
 // when repeatedly applied to its own output, starting from z = 0,
 // where f(z) = z*z + c.
 //
