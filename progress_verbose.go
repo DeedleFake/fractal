@@ -5,9 +5,9 @@ package main
 import "fmt"
 
 func showProgress(y int) {
-	fmt.Printf("\r%d/%d (%d%%)", y, imgHeight, int(100*(float64(y)/float64(imgHeight))))
+	fmt.Printf("\r%v/%v (%.0v%%)", y, ImageHeight, float64(y)*100/ImageHeight)
 }
 
 func showProgressDone() {
-	fmt.Printf("\r%d/%[1]d (100%%)\n", imgHeight)
+	fmt.Printf("\r%v/%[1]v (100%%)\n", ImageHeight)
 }

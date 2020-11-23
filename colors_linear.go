@@ -1,4 +1,14 @@
+// +build !nonlinear
+
 package main
+
+func colorStep(c uint8) int {
+	return int(rgbToLinear(c))
+}
+
+func convertColor(c float64) uint8 {
+	return linearToRGB(uint64(c))
+}
 
 // https://github.com/ncruces/go-image/blob/v0.1.0/imageutil/srgb.go
 
@@ -72,10 +82,11 @@ var lin2rgb = [...]uint16{
 	0xfce2, 0xfd54, 0xfdc7, 0xfe39, 0xfeab, 0xff1d, 0xff8e, 0xffff,
 }
 
-func RGBToLinear(rgb uint8) uint16 {
+func rgbToLinear(rgb uint8) uint16 {
 	return rgb2lin[rgb]
 }
-func LinearToRGB(lin uint64) uint8 {
+
+func linearToRGB(lin uint64) uint8 {
 	mul := lin * 0xff0100
 	div := uint32(mul >> 32)
 	l := uint32(lin2rgb[uint8(div)])

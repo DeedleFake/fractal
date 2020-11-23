@@ -14,29 +14,26 @@ import (
 // Configuration
 const (
 	// Position and height
-	px = -0.5557506
-	py = -0.55560
-	ph = 0.000000001
-	//px = -2
-	//py = -1.2
-	//ph = 2.5
+	Position = -0.5557506 - 0.55560i
+	Height   = 0.000000001
+	//Position = -2 - 1.2i
+	//Height = 2.5
 
 	// Quality
-	imgWidth  = 1024
-	imgHeight = 1024
-	maxIter   = 1500
-	samples   = 50
-
-	profileCPU = true
+	ImageWidth    = 1024.0
+	ImageHeight   = 1024.0
+	MaxIterations = 1500
+	Samples       = 50
+	Threshold     = 4
 )
 
 const (
-	ratio = float64(imgWidth) / float64(imgHeight)
+	ratio = ImageWidth / ImageHeight
 )
 
 func main() {
 	fmt.Println("Allocating image...")
-	img := image.NewRGBA(image.Rect(0, 0, imgWidth, imgHeight))
+	img := image.NewRGBA(image.Rect(0, 0, ImageWidth, ImageHeight))
 
 	fmt.Println("Rendering...")
 	start := time.Now()
@@ -59,6 +56,7 @@ func main() {
 	fmt.Println("Done!")
 }
 
+// render renders a fractal to img.
 func render(img *image.RGBA) {
 	if profileCPU {
 		f, err := os.Create("profile.prof")
@@ -72,8 +70,8 @@ func render(img *image.RGBA) {
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(imgHeight)
-	for y := 0; y < imgHeight; y++ {
+	wg.Add(ImageHeight)
+	for y := 0; y < ImageHeight; y++ {
 		go renderRow(&wg, img, y)
 	}
 	wg.Wait()
@@ -81,33 +79,41 @@ func render(img *image.RGBA) {
 	showProgressDone()
 }
 
+// renderRow renders a single row of pixels to img, telling wg when
+// it's done.
 func renderRow(wg *sync.WaitGroup, img *image.RGBA, y int) {
 	defer wg.Done()
 	defer showProgress(y)
 
-	for x := 0; x < imgWidth; x++ {
+	fy := float64(y)
+	for x := 0; x < ImageWidth; x++ {
+		fx := float64(x)
 		var r, g, b int
-		for i := 0; i < samples; i++ {
-			nx := ph*ratio*((float64(x)+RandFloat64())/float64(imgWidth)) + px
-			ny := ph*((float64(y)+RandFloat64())/float64(imgHeight)) + py
+		for i := 0; i < Samples; i++ {
+			c := Height*complex(
+				ratio*((fx+randFloat64())/ImageWidth),
+				(fy+randFloat64())/ImageHeight,
+			) + Position
 
-			c := paint(mandelbrotIter(nx, ny, maxIter))
-			r += mixColorPart(c.R)
-			g += mixColorPart(c.G)
-			b += mixColorPart(c.B)
+			col := mandelbrotColor(mandelbrotIter(c))
+			r += colorStep(col.R)
+			g += colorStep(col.G)
+			b += colorStep(col.B)
 		}
 
-		cr := toRGBPart(float64(r) / float64(samples))
-		cg := toRGBPart(float64(g) / float64(samples))
-		cb := toRGBPart(float64(b) / float64(samples))
+		cr := convertColor(float64(r) / float64(Samples))
+		cg := convertColor(float64(g) / float64(Samples))
+		cb := convertColor(float64(b) / float64(Samples))
 
 		setPix(img, x, y, color.RGBA{R: cr, G: cg, B: cb, A: 255})
 	}
 }
 
+// setPix sets a pixel in an image.RGBA to a given color. It's
+// basically directly copied from (*image.RGBA).SetRGBA() to skip the
+// bounds check.
 func setPix(p *image.RGBA, x, y int, c color.RGBA) {
-	// Copied from (*image.RGBA).SetRGBA() to skip bounds check.
-	i := y*p.Stride + x*4
+	i := p.PixOffset(x, y)
 	s := p.Pix[i : i+4 : i+4]
 	s[0] = c.R
 	s[1] = c.G
@@ -115,42 +121,27 @@ func setPix(p *image.RGBA, x, y int, c color.RGBA) {
 	s[3] = c.A
 }
 
-func paint(r float64, n int) color.RGBA {
-	if r > 4 {
-		return hslToRGB(float64(n)/800*r, 1, 0.5)
+// mandelbrotColor returns the color that a pixel should be colored
+// based on the results of the Mandelbrot iteration for that pixel.
+func mandelbrotColor(check float64, iter int) color.RGBA {
+	if check > Threshold {
+		return hslToRGB(float64(iter)/800*check, 1, 0.5)
 	}
 
 	return color.RGBA{R: 255, G: 255, B: 255, A: 255}
 }
 
-func mandelbrotIter(px, py float64, maxIter int) (float64, int) {
-	var x, y, xx, yy, xy float64
-
-	for i := 0; i < maxIter; i++ {
-		xx, yy, xy = x*x, y*y, x*y
-		if xx+yy > 4 {
-			return xx + yy, i
-		}
-		x = xx - yy + px
-		y = 2*xy + py
+// mandelbrotIter checks if |f(z)| becomes greater than a threshold
+// when repeatedly applied to its own output, starting from z = 0,
+// where f(z) = z*z + c.
+//
+// It returns |f(z)|^2 for the final result of f(z) and the number of
+// times that it iterated to get to that result.
+func mandelbrotIter(c complex128) (check float64, iter int) {
+	prev := c
+	for ; (iter < MaxIterations) && (check <= Threshold); iter++ {
+		check = real(prev)*real(prev) + imag(prev)*imag(prev)
+		prev = prev*prev + c
 	}
-
-	return xx + yy, maxIter
+	return check, iter
 }
-
-// by u/Boraini
-//func mandelbrotIterComplex(px, py float64, maxIter int) (float64, int) {
-//	var current complex128
-//	pxpy := complex(px, py)
-//
-//	for i := 0; i < maxIter; i++ {
-//		magnitude := cmplx.Abs(current)
-//		if magnitude > 2 {
-//			return magnitude * magnitude, i
-//		}
-//		current = current * current + pxpy
-//	}
-//
-//	magnitude := cmplx.Abs(current)
-//	return magnitude * magnitude, maxIter
-//}

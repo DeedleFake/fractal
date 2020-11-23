@@ -2,10 +2,10 @@
 
 package main
 
-func mixColorPart(c uint8) int {
+func colorStep(c uint8) int {
 	return int(c)
 }
 
-func toRGBPart(c float64) uint8 {
+func convertColor(c float64) uint8 {
 	return uint8(c)
 }
