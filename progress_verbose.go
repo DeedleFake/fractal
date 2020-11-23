@@ -5,7 +5,7 @@ package main
 import "fmt"
 
 func showProgress(y int) {
-	fmt.Printf("\r%v/%v (%.0v%%)", y, ImageHeight, float64(y)*100/ImageHeight)
+	fmt.Printf("\r%v/%v (%v%%)", y, ImageHeight, int(float64(y)*100/ImageHeight))
 }
 
 func showProgressDone() {
