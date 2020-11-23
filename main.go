@@ -1,10 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"image/png"
-	"log"
 	"os"
 	"runtime/pprof"
 	"sync"
@@ -27,7 +27,7 @@ const (
 	maxIter   = 1500
 	samples   = 50
 
-	profileCpu = false
+	profileCPU = true
 )
 
 const (
@@ -35,34 +35,38 @@ const (
 )
 
 func main() {
-	log.Println("Allocating image...")
+	fmt.Println("Allocating image...")
 	img := image.NewRGBA(image.Rect(0, 0, imgWidth, imgHeight))
 
-	log.Println("Rendering...")
+	fmt.Println("Rendering...")
 	start := time.Now()
 	render(img)
 	end := time.Now()
 
-	log.Println("Done rendering in", end.Sub(start))
+	fmt.Println("Done rendering in", end.Sub(start))
 
-	log.Println("Encoding image...")
+	fmt.Println("Encoding image...")
 	f, err := os.Create("result.png")
 	if err != nil {
 		panic(err)
 	}
+	defer f.Close()
+
 	err = png.Encode(f, img)
 	if err != nil {
 		panic(err)
 	}
-	log.Println("Done!")
+	fmt.Println("Done!")
 }
 
 func render(img *image.RGBA) {
-	if profileCpu {
+	if profileCPU {
 		f, err := os.Create("profile.prof")
 		if err != nil {
 			panic(err)
 		}
+		defer f.Close()
+
 		pprof.StartCPUProfile(f)
 		defer pprof.StopCPUProfile()
 	}
@@ -70,38 +74,40 @@ func render(img *image.RGBA) {
 	var wg sync.WaitGroup
 	wg.Add(imgHeight)
 	for y := 0; y < imgHeight; y++ {
-		go func(y int) {
-			defer wg.Done()
-			defer showProgress(y)
-
-			for x := 0; x < imgWidth; x++ {
-				var r, g, b int
-				for i := 0; i < samples; i++ {
-					nx := ph*ratio*((float64(x)+RandFloat64())/float64(imgWidth)) + px
-					ny := ph*((float64(y)+RandFloat64())/float64(imgHeight)) + py
-
-					c := paint(mandelbrotIter(nx, ny, maxIter))
-					r += mixColorPart(c.R)
-					g += mixColorPart(c.G)
-					b += mixColorPart(c.B)
-				}
-
-				cr := toRGBPart(float64(r) / float64(samples))
-				cg := toRGBPart(float64(g) / float64(samples))
-				cb := toRGBPart(float64(b) / float64(samples))
-
-				setPix(img, x, y, color.RGBA{R: cr, G: cg, B: cb, A: 255})
-			}
-		}(y)
+		go renderRow(&wg, img, y)
 	}
 	wg.Wait()
 
 	showProgressDone()
 }
 
+func renderRow(wg *sync.WaitGroup, img *image.RGBA, y int) {
+	defer wg.Done()
+	defer showProgress(y)
+
+	for x := 0; x < imgWidth; x++ {
+		var r, g, b int
+		for i := 0; i < samples; i++ {
+			nx := ph*ratio*((float64(x)+RandFloat64())/float64(imgWidth)) + px
+			ny := ph*((float64(y)+RandFloat64())/float64(imgHeight)) + py
+
+			c := paint(mandelbrotIter(nx, ny, maxIter))
+			r += mixColorPart(c.R)
+			g += mixColorPart(c.G)
+			b += mixColorPart(c.B)
+		}
+
+		cr := toRGBPart(float64(r) / float64(samples))
+		cg := toRGBPart(float64(g) / float64(samples))
+		cb := toRGBPart(float64(b) / float64(samples))
+
+		setPix(img, x, y, color.RGBA{R: cr, G: cg, B: cb, A: 255})
+	}
+}
+
 func setPix(p *image.RGBA, x, y int, c color.RGBA) {
 	// Copied from (*image.RGBA).SetRGBA() to skip bounds check.
-	i := p.PixOffset(x, y)
+	i := y*p.Stride + x*4
 	s := p.Pix[i : i+4 : i+4]
 	s[0] = c.R
 	s[1] = c.G
