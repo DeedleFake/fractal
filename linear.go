@@ -74,12 +74,11 @@ var lin2rgb = [...]uint16{
 func RGBToLinear(rgb uint8) uint16 {
 	return rgb2lin[rgb]
 }
-func LinearToRGB(lin uint16) uint8 {
-	mul := uint64(lin) * 0xff0100
+func LinearToRGB(lin uint64) uint8 {
+	mul := lin * 0xff0100
 	div := uint32(mul >> 32)
 	l := uint32(lin2rgb[uint8(div)])
 
-	return uint8((uint64(257 * l + uint32(uint64(uint32(mul)) * 257 >> 32) *
-		(uint32(lin2rgb[uint8(div + 1)]) - l ) + 0x8100) * 0x1fc05f9) >> 41)
+	return uint8((uint64(257*l+uint32(uint64(uint32(mul))*257>>32)*
+		(uint32(lin2rgb[uint8(div+1)])-l)+0x8100) * 0x1fc05f9) >> 41)
 }
-

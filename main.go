@@ -1,14 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"image"
 	"image/color"
 	"image/png"
 	"log"
 	"os"
-	"runtime"
 	"runtime/pprof"
+	"sync"
 	"time"
 )
 
@@ -23,14 +22,12 @@ const (
 	//ph = 2.5
 
 	// Quality
-	imgWidth     = 1024
-	imgHeight    = 1024
-	maxIter      = 1500
-	samples      = 50
-	linearMixing = true
+	imgWidth  = 1024
+	imgHeight = 1024
+	maxIter   = 1500
+	samples   = 50
 
-	showProgress = true
-	profileCpu   = false
+	profileCpu = false
 )
 
 const (
@@ -70,74 +67,66 @@ func render(img *image.RGBA) {
 		defer pprof.StopCPUProfile()
 	}
 
-	jobs := make(chan int)
-
-	for i := 0; i < runtime.NumCPU(); i++ {
-		go func () {
-			for y := range jobs {
-				for x := 0; x < imgWidth; x++ {
-					var r, g, b int
-					for i := 0; i < samples; i++ {
-						nx := ph * ratio * ((float64(x) + RandFloat64()) / float64(imgWidth)) + px
-						ny := ph * ((float64(y) + RandFloat64()) / float64(imgHeight)) + py
-						c := paint(mandelbrotIter(nx, ny, maxIter))
-						if linearMixing {
-							r += int(RGBToLinear(c.R))
-							g += int(RGBToLinear(c.G))
-							b += int(RGBToLinear(c.B))
-						} else {
-							r += int(c.R)
-							g += int(c.G)
-							b += int(c.B)
-						}
-					}
-					var cr, cg, cb uint8
-					if linearMixing {
-						cr = LinearToRGB(uint16(float64(r) / float64(samples)))
-						cg = LinearToRGB(uint16(float64(g) / float64(samples)))
-						cb = LinearToRGB(uint16(float64(b) / float64(samples)))
-					} else {
-						cr = uint8(float64(r) / float64(samples))
-						cg = uint8(float64(g) / float64(samples))
-						cb = uint8(float64(b) / float64(samples))
-					}
-					img.SetRGBA(x, y, color.RGBA{ R: cr, G: cg, B: cb, A: 255 })
-				}
-			}
-		}()
-	}
-
+	var wg sync.WaitGroup
+	wg.Add(imgHeight)
 	for y := 0; y < imgHeight; y++ {
-		jobs <- y
-		if showProgress {
-			fmt.Printf("\r%d/%d (%d%%)", y, imgHeight, int(100*(float64(y) / float64(imgHeight))))
-		}
+		go func(y int) {
+			defer wg.Done()
+			defer showProgress(y)
+
+			for x := 0; x < imgWidth; x++ {
+				var r, g, b int
+				for i := 0; i < samples; i++ {
+					nx := ph*ratio*((float64(x)+RandFloat64())/float64(imgWidth)) + px
+					ny := ph*((float64(y)+RandFloat64())/float64(imgHeight)) + py
+
+					c := paint(mandelbrotIter(nx, ny, maxIter))
+					r += mixColorPart(c.R)
+					g += mixColorPart(c.G)
+					b += mixColorPart(c.B)
+				}
+
+				cr := toRGBPart(float64(r) / float64(samples))
+				cg := toRGBPart(float64(g) / float64(samples))
+				cb := toRGBPart(float64(b) / float64(samples))
+
+				setPix(img, x, y, color.RGBA{R: cr, G: cg, B: cb, A: 255})
+			}
+		}(y)
 	}
-	if showProgress {
-		fmt.Printf("\r%d/%[1]d (100%%)\n", imgHeight)
-	}
+	wg.Wait()
+
+	showProgressDone()
+}
+
+func setPix(p *image.RGBA, x, y int, c color.RGBA) {
+	// Copied from (*image.RGBA).SetRGBA() to skip bounds check.
+	i := p.PixOffset(x, y)
+	s := p.Pix[i : i+4 : i+4]
+	s[0] = c.R
+	s[1] = c.G
+	s[2] = c.B
+	s[3] = c.A
 }
 
 func paint(r float64, n int) color.RGBA {
-	insideSet := color.RGBA{ R: 255, G: 255, B: 255, A: 255 }
-
 	if r > 4 {
-		return hslToRGB(float64(n) / 800 * r, 1, 0.5)
+		return hslToRGB(float64(n)/800*r, 1, 0.5)
 	}
 
-	return insideSet
+	return color.RGBA{R: 255, G: 255, B: 255, A: 255}
 }
 
 func mandelbrotIter(px, py float64, maxIter int) (float64, int) {
 	var x, y, xx, yy, xy float64
 
 	for i := 0; i < maxIter; i++ {
-		xx, yy, xy = x * x, y * y, x * y
-		if xx + yy > 4 {
+		xx, yy, xy = x*x, y*y, x*y
+		if xx+yy > 4 {
 			return xx + yy, i
 		}
 		x = xx - yy + px
-		y = 2 * xy + py
+		y = 2*xy + py
 	}
 
 	return xx + yy, maxIter
