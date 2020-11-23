@@ -11,15 +11,13 @@ import (
 	"time"
 )
 
-// Configuration
+// Configuration constants.
 const (
-	// Position and height
 	Position = -0.5557506 - 0.55560i
 	Height   = 0.000000001
 	//Position = -2 - 1.2i
 	//Height = 2.5
 
-	// Quality
 	ImageWidth    = 1024.0
 	ImageHeight   = 1024.0
 	MaxIterations = 1500
@@ -27,6 +25,7 @@ const (
 	Threshold     = 4
 )
 
+// Derived constants.
 const (
 	ratio = ImageWidth / ImageHeight
 )
