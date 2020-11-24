@@ -24,6 +24,8 @@ const (
 	MaxIterations = 1500
 	Samples       = 50
 	Threshold     = 4
+
+	IterHueAdjust = 800
 )
 
 // Configuration variables.
@@ -125,7 +127,7 @@ func setPix(p *image.RGBA, x, y int, c color.RGBA) {
 // based on the results of the Mandelbrot iteration for that pixel.
 func mandelbrotColor(check float64, iter int) color.RGBA {
 	if check > Threshold {
-		return hslToRGB(float64(iter)/800*check, 1, 0.5)
+		return hslToRGB(float64(iter)/IterHueAdjust*check, 1, 0.5)
 	}
 
 	return ThresholdColor
