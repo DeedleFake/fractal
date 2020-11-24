@@ -68,21 +68,21 @@ func render(img *image.RGBA) {
 		defer pprof.StopCPUProfile()
 	}
 
+	defer progressDone()
+
 	var wg sync.WaitGroup
 	wg.Add(ImageHeight)
 	for y := 0; y < ImageHeight; y++ {
 		go renderRow(&wg, img, y)
 	}
 	wg.Wait()
-
-	showProgressDone()
 }
 
 // renderRow renders a single row of pixels to img, telling wg when
 // it's done.
 func renderRow(wg *sync.WaitGroup, img *image.RGBA, y int) {
 	defer wg.Done()
-	defer showProgress(y)
+	defer updateProgress()
 
 	fy := float64(y)
 	for x := 0; x < ImageWidth; x++ {

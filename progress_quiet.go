@@ -2,8 +2,8 @@
 
 package main
 
-func showProgress(p int) {
+func updateProgress() {
 }
 
-func showProgressDone() {
+func progressDone() {
 }

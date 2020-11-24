@@ -4,10 +4,29 @@ package main
 
 import "fmt"
 
-func showProgress(y int) {
-	fmt.Printf("\r%v/%v (%v%%)", y, ImageHeight, int(float64(y)*100/ImageHeight))
+var (
+	progressChan     = make(chan struct{})
+	progressDoneChan = make(chan struct{})
+)
+
+func init() {
+	go func() {
+		defer close(progressDoneChan)
+		defer fmt.Println()
+
+		var done int
+		for range progressChan {
+			done++
+			fmt.Printf("\r%v/%v (%v%%)", done, ImageHeight, int(float64(done)*100/ImageHeight))
+		}
+	}()
 }
 
-func showProgressDone() {
-	fmt.Printf("\r%v/%[1]v (100%%)\n", ImageHeight)
+func updateProgress() {
+	progressChan <- struct{}{}
+}
+
+func progressDone() {
+	close(progressChan)
+	<-progressDoneChan
 }
