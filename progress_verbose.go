@@ -5,7 +5,7 @@ package main
 import "fmt"
 
 var (
-	progressChan     = make(chan struct{})
+	progressChan     = make(chan int)
 	progressDoneChan = make(chan struct{})
 )
 
@@ -15,15 +15,15 @@ func init() {
 		defer fmt.Println()
 
 		var done int
-		for range progressChan {
-			done++
+		for amount := range progressChan {
+			done += amount
 			fmt.Printf("\r%v/%v (%v%%)", done, ImageHeight, int(float64(done)*100/ImageHeight))
 		}
 	}()
 }
 
-func updateProgress() {
-	progressChan <- struct{}{}
+func updateProgress(amount int) {
+	progressChan <- amount
 }
 
 func progressDone() {

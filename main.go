@@ -13,10 +13,10 @@ import (
 
 // Configuration constants.
 const (
-	Position = -0.5557506 - 0.55560i
-	Height   = 0.000000001
-	//Position = -2 - 1.2i
-	//Height = 2.5
+	//Position = -0.5557506 - 0.55560i
+	//Height   = 0.000000001
+	Position = -2 - 1.2i
+	Height   = 2.5
 
 	ImageWidth    = 1024.0
 	ImageHeight   = 1024.0
@@ -82,7 +82,7 @@ func render(img *image.RGBA) {
 // it's done.
 func renderRow(wg *sync.WaitGroup, img *image.RGBA, y int) {
 	defer wg.Done()
-	defer updateProgress()
+	defer updateProgress(1)
 
 	fy := float64(y)
 	for x := 0; x < ImageWidth; x++ {
