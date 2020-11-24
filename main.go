@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"math/rand"
 	"os"
 	"runtime/pprof"
 	"sync"
@@ -84,12 +85,14 @@ func renderRow(wg *sync.WaitGroup, img *image.RGBA, y int) {
 	defer wg.Done()
 	defer updateProgress(1)
 
+	s := rand.New(rand.NewSource(int64(time.Now().UnixNano())))
+
 	for x := 0; x < ImageWidth; x++ {
 		xy := complex(float64(x), float64(y))
 
 		var r, g, b int
 		for i := float64(0); i < Samples; i++ {
-			shifted := xy + complex(randFloat64(), randFloat64())
+			shifted := xy + complex(s.Float64(), s.Float64())
 			c := Height*complex(real(shifted)/ImageWidth, imag(shifted)/ImageHeight) + Position
 
 			col := mandelbrotColor(mandelbrotIter(c))
