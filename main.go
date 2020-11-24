@@ -18,8 +18,8 @@ const (
 	//Position = -2 - 1.2i
 	//Height   = 2.5
 
-	ImageWidth    = 1024.0
-	ImageHeight   = 1024.0
+	ImageWidth    = 1280
+	ImageHeight   = 1024
 	MaxIterations = 1500
 	Samples       = 50
 	Threshold     = 4
@@ -28,11 +28,6 @@ const (
 // Configuration variables.
 var (
 	ThresholdColor = color.RGBAModel.Convert(color.White).(color.RGBA)
-)
-
-// Derived constants.
-const (
-	ratio = ImageWidth / ImageHeight
 )
 
 func main() {
@@ -89,16 +84,13 @@ func renderRow(wg *sync.WaitGroup, img *image.RGBA, y int) {
 	defer wg.Done()
 	defer updateProgress(1)
 
-	fy := float64(y)
 	for x := 0; x < ImageWidth; x++ {
-		fx := float64(x)
+		xy := complex(float64(x), float64(y))
 
 		var r, g, b int
-		for i := 0; i < Samples; i++ {
-			c := Height*complex(
-				ratio*((fx+randFloat64())/ImageWidth),
-				(fy+randFloat64())/ImageHeight,
-			) + Position
+		for i := float64(0); i < Samples; i++ {
+			shifted := xy + complex(randFloat64(), randFloat64())
+			c := Height*complex(real(shifted)/ImageWidth, imag(shifted)/ImageHeight) + Position
 
 			col := mandelbrotColor(mandelbrotIter(c))
 			r += colorStep(col.R)
