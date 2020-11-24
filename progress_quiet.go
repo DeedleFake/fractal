@@ -2,7 +2,7 @@
 
 package main
 
-func updateProgress() {
+func updateProgress(int) {
 }
 
 func progressDone() {
