@@ -7,7 +7,6 @@ import (
 	"image/png"
 	"math/rand"
 	"os"
-	"runtime/pprof"
 	"sync"
 	"time"
 )
@@ -47,30 +46,20 @@ func main() {
 	fmt.Println("Encoding image...")
 	f, err := os.Create("result.png")
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("create image output file: %w", err))
 	}
 	defer f.Close()
 
 	err = png.Encode(f, img)
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("encode image: %w", err))
 	}
 	fmt.Println("Done!")
 }
 
 // render renders a fractal to img.
 func render(img *image.RGBA) {
-	if profileCPU {
-		f, err := os.Create("profile.prof")
-		if err != nil {
-			panic(err)
-		}
-		defer f.Close()
-
-		pprof.StartCPUProfile(f)
-		defer pprof.StopCPUProfile()
-	}
-
+	defer startProfiling()()
 	defer progressDone()
 
 	var wg sync.WaitGroup
