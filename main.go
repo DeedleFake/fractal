@@ -25,6 +25,11 @@ const (
 	Threshold     = 4
 )
 
+// Configuration variables.
+var (
+	ThresholdColor = color.RGBAModel.Convert(color.White).(color.RGBA)
+)
+
 // Derived constants.
 const (
 	ratio = ImageWidth / ImageHeight
@@ -128,7 +133,7 @@ func mandelbrotColor(check float64, iter int) color.RGBA {
 		return hslToRGB(float64(iter)/800*check, 1, 0.5)
 	}
 
-	return color.RGBA{R: 255, G: 255, B: 255, A: 255}
+	return ThresholdColor
 }
 
 // mandelbrotIter checks if |f(z)| becomes greater than Threshold
